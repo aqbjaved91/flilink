@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.flilink.twa",
+      "sha256_cert_fingerprints": [
+        "A3:99:8C:03:AF:35:8F:09:08:01:BE:54:AD:D1:89:9D:3F:A3:98:4B:EE:A0:BC:66:7D:8C:8E:37:B3:0C:AF:59"
+      ]
+    }
+  }
+]

@@ -42,3 +42,5 @@ next-env.d.ts
 
 # local HTTPS dev certificates (npm run dev:phone)
 /certificates
+
+.vercel
