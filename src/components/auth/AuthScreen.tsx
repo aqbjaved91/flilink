@@ -57,13 +57,27 @@ function validateSignup(f: SignupForm): Partial<Record<keyof SignupForm, string>
   return errors;
 }
 
-function friendlyOtpError(message: string): string {
-  const m = message.toLowerCase();
+/**
+ * Turn a Supabase auth error into copy a creator can act on. Takes the whole
+ * error (not just `.message`) so the mail-delivery case below can check
+ * `status` too. Note: for any 5xx response, @supabase/auth-js throws an
+ * `AuthRetryableFetchError` whose `code` is always undefined (it never
+ * reaches the branch that reads the server's `error_code`), so `status` +
+ * the message text — not `code` — is what actually distinguishes this case.
+ */
+function friendlyOtpError(error: { message: string; status?: number }): string {
+  const m = error.message.toLowerCase();
   if (m.includes('rate') || m.includes('security purposes'))
     return 'Too many attempts. Please wait a minute and try again.';
   if (m.includes('expired')) return 'This code has expired. Tap “Resend code” for a new one.';
   if (m.includes('invalid') || m.includes('token')) return 'Incorrect code. Please check and try again.';
-  return message;
+  // GoTrue's generic wrapper around a failed send (e.g. "Error sending magic
+  // link email") — the mail provider is down/misconfigured on the project,
+  // not something the creator did wrong
+  if (error.status && error.status >= 500 && m.includes('sending') && m.includes('email')) {
+    return 'We couldn’t send your verification email right now. Please try again in a few minutes.';
+  }
+  return error.message;
 }
 
 export function AuthScreen({ defaultMode = 'login' }: { defaultMode?: Mode }) {
@@ -127,7 +141,7 @@ export function AuthScreen({ defaultMode = 'login' }: { defaultMode?: Mode }) {
         options: { shouldCreateUser: mode === 'signup' },
       });
       if (otpError) {
-        setError(friendlyOtpError(otpError.message));
+        setError(friendlyOtpError(otpError));
         return;
       }
 
@@ -174,7 +188,7 @@ export function AuthScreen({ defaultMode = 'login' }: { defaultMode?: Mode }) {
         type: 'email',
       });
       if (verifyError || !data.user) {
-        setError(friendlyOtpError(verifyError?.message || 'Invalid code'));
+        setError(friendlyOtpError(verifyError || { message: 'Invalid code' }));
         setOtp('');
         return;
       }
